@@ -3,7 +3,7 @@ import { Link } from "react-router-dom";
 import { useAuth } from "../App";
 
 const API = import.meta.env.VITE_API_URL || "http://localhost:3000";
-const LIMIT = 8;
+const LIMIT = 10;
 
 function useDebouncedValue(value, delay) {
   const [debounced, setDebounced] = useState(value);
@@ -14,6 +14,9 @@ function useDebouncedValue(value, delay) {
   return debounced;
 }
 
+const STATUS_ICON = { todo: "○", "in-progress": "◑", done: "●" };
+const STATUS_LABEL = { todo: "Todo", "in-progress": "In Progress", done: "Done" };
+
 export default function TasksList() {
   const { user } = useAuth();
   const [tasks, setTasks]         = useState([]);
@@ -23,7 +26,7 @@ export default function TasksList() {
   const [error, setError]         = useState(null);
   const [search, setSearch]       = useState("");
   const [statusFilter, setStatus] = useState("");
-  const [toast, setToast]         = useState(null); // { msg, type }
+  const [toast, setToast]         = useState(null);
 
   const debouncedSearch = useDebouncedValue(search, 300);
 
@@ -33,8 +36,7 @@ export default function TasksList() {
   };
 
   const fetchTasks = useCallback(async (off, srch, stat) => {
-    setLoading(true);
-    setError(null);
+    setLoading(true); setError(null);
     try {
       const p = new URLSearchParams({ limit: LIMIT, offset: off });
       if (srch) p.set("search", srch);
@@ -44,28 +46,22 @@ export default function TasksList() {
       const data = await res.json();
       setTasks(data.tasks);
       setTotal(data.total);
-    } catch (err) {
-      setError(err.message);
-    } finally {
-      setLoading(false);
-    }
+    } catch (err) { setError(err.message); }
+    finally { setLoading(false); }
   }, []);
 
-  // Reset to page 1 when search/filter changes
   useEffect(() => {
     setOffset(0);
     fetchTasks(0, debouncedSearch, statusFilter);
   }, [debouncedSearch, statusFilter, fetchTasks]);
 
-  // Fetch when page changes (but not when search/filter trigger the reset above)
   useEffect(() => {
     if (offset > 0) fetchTasks(offset, debouncedSearch, statusFilter);
   }, [offset]); // eslint-disable-line
 
-  // Optimistic delete
   const handleDelete = async (taskId) => {
     if (!window.confirm("Delete this task?")) return;
-    const prev  = [...tasks];
+    const prev = [...tasks];
     const prevT = total;
     setTasks(t => t.filter(x => x.id !== taskId));
     setTotal(n => n - 1);
@@ -74,9 +70,8 @@ export default function TasksList() {
       if (!res.ok) throw new Error();
       showToast("Task deleted.", "success");
     } catch {
-      setTasks(prev);
-      setTotal(prevT);
-      showToast("Failed to delete task. Please try again.", "error");
+      setTasks(prev); setTotal(prevT);
+      showToast("Failed to delete task.", "error");
     }
   };
 
@@ -86,7 +81,6 @@ export default function TasksList() {
 
   return (
     <div>
-      {/* Toast */}
       {toast && (
         <div className={`toast toast-${toast.type}`} role="alert" aria-live="polite">
           {toast.msg}
@@ -95,12 +89,21 @@ export default function TasksList() {
       )}
 
       {/* Header */}
-      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:"1rem", flexWrap:"wrap", gap:"0.75rem" }}>
-        <h1 style={{ fontSize:"1.5rem" }}>
-          All Tasks{" "}
-          {!loading && <span style={{ color:"var(--text-secondary)", fontWeight:400, fontSize:"1rem" }}>({total})</span>}
-        </h1>
-        {user && <Link to="/tasks/new" className="btn btn-primary">+ New Task</Link>}
+      <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:"1.25rem", flexWrap:"wrap", gap:"0.75rem" }}>
+        <div>
+          <h1 style={{ fontSize:"1.3rem", fontWeight:600, letterSpacing:"-0.02em" }}>Tasks</h1>
+          {!loading && (
+            <p style={{ fontSize:"12px", color:"var(--text-muted)", marginTop:"2px" }}>
+              {total} task{total !== 1 ? "s" : ""}
+              {(search || statusFilter) ? " matching filters" : " total"}
+            </p>
+          )}
+        </div>
+        {user && (
+          <Link to="/tasks/new" className="btn btn-primary">
+            <span style={{ fontSize:"16px", lineHeight:1 }}>+</span> New Task
+          </Link>
+        )}
       </div>
 
       {/* Search + Filter */}
@@ -110,32 +113,33 @@ export default function TasksList() {
           placeholder="Search tasks…"
           value={search}
           onChange={e => setSearch(e.target.value)}
-          aria-label="Search tasks by title"
+          aria-label="Search tasks"
+          style={{ fontSize:"13px" }}
         />
         <select
           value={statusFilter}
           onChange={e => setStatus(e.target.value)}
           aria-label="Filter by status"
+          style={{ fontSize:"13px" }}
         >
           <option value="">All statuses</option>
-          <option value="todo">To Do</option>
-          <option value="in-progress">In Progress</option>
-          <option value="done">Done</option>
+          <option value="todo">○ Todo</option>
+          <option value="in-progress">◑ In Progress</option>
+          <option value="done">● Done</option>
         </select>
       </div>
 
       {/* Loading */}
       {loading && (
-        <div className="spinner-wrap" aria-busy="true" aria-label="Loading tasks">
+        <div className="spinner-wrap" aria-busy="true">
           <div className="spinner" />
-          <p style={{ marginTop:"0.75rem" }}>Loading tasks…</p>
         </div>
       )}
 
       {/* Error */}
       {!loading && error && (
         <div className="error-state" role="alert">
-          <p>⚠️ {error}</p>
+          <p>⚠ {error}</p>
           <button className="btn btn-secondary" onClick={() => fetchTasks(offset, debouncedSearch, statusFilter)}>
             Try Again
           </button>
@@ -145,50 +149,83 @@ export default function TasksList() {
       {/* Empty */}
       {!loading && !error && tasks.length === 0 && (
         <div className="empty-state">
-          <p style={{ fontSize:"2rem" }}>📭</p>
-          <p>{search || statusFilter ? "No tasks match your search." : "No tasks yet."}</p>
+          <p style={{ fontSize:"28px", marginBottom:"0.5rem" }}>○</p>
+          <p style={{ fontWeight:500, color:"var(--text-secondary)" }}>
+            {search || statusFilter ? "No tasks match your search." : "No tasks yet."}
+          </p>
           {user && !search && !statusFilter && (
-            <Link to="/tasks/new" className="btn btn-primary" style={{ marginTop:"0.5rem" }}>
+            <Link to="/tasks/new" className="btn btn-primary" style={{ marginTop:"0.75rem" }}>
               Create your first task
             </Link>
           )}
         </div>
       )}
 
-      {/* Task list */}
+      {/* Task list — Linear style */}
       {!loading && !error && tasks.length > 0 && (
-        <div style={{ display:"grid", gap:"0.75rem" }}>
+        <div className="task-list">
           {tasks.map(task => (
-            <article key={task.id} className="card task-card">
-              <div style={{ flex:1 }}>
-                <strong>{task.title}</strong>
-                {task.project && (
-                  <span style={{ marginLeft:"0.5rem", fontSize:"0.8rem", color:"var(--text-secondary)" }}>
-                    📁 {task.project.title}
-                  </span>
-                )}
-                {task.description && (
-                  <p style={{ color:"var(--text-secondary)", fontSize:"0.9rem", marginTop:"0.25rem" }}>
-                    {task.description}
-                  </p>
-                )}
-                {task.dueDate && (
-                  <p style={{ fontSize:"0.8rem", color:"var(--text-secondary)", marginTop:"0.25rem" }}>
-                    📅 {new Date(task.dueDate).toLocaleDateString()}
-                  </p>
-                )}
+            <article key={task.id} className="task-row" style={{ gap:"0.75rem" }}>
+
+              {/* Status icon */}
+              <span
+                style={{
+                  fontSize:"14px", flexShrink:0,
+                  color: task.status === "done" ? "var(--success)"
+                       : task.status === "in-progress" ? "var(--warning)"
+                       : "var(--text-muted)",
+                }}
+                title={STATUS_LABEL[task.status]}
+              >
+                {STATUS_ICON[task.status]}
+              </span>
+
+              {/* Title + meta */}
+              <div style={{ flex:1, minWidth:0 }}>
+                <span style={{
+                  fontWeight: 450,
+                  fontSize: "13.5px",
+                  color: task.status === "done" ? "var(--text-muted)" : "var(--text-primary)",
+                  textDecoration: task.status === "done" ? "line-through" : "none",
+                  display: "block",
+                  overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                }}>
+                  {task.title}
+                </span>
+                <div style={{ display:"flex", gap:"0.75rem", marginTop:"2px", flexWrap:"wrap" }}>
+                  {task.project && (
+                    <span style={{ fontSize:"11.5px", color:"var(--text-muted)" }}>
+                      {task.project.title}
+                    </span>
+                  )}
+                  {task.dueDate && (
+                    <span style={{
+                      fontSize:"11.5px",
+                      color: new Date(task.dueDate) < new Date() && task.status !== "done"
+                        ? "var(--danger)" : "var(--text-muted)",
+                    }}>
+                      {new Date(task.dueDate).toLocaleDateString("en-US", { month:"short", day:"numeric" })}
+                    </span>
+                  )}
+                </div>
               </div>
-              <div style={{ display:"flex", alignItems:"center", gap:"0.5rem", flexShrink:0 }}>
-                <span className={`badge badge-${task.status}`}>{task.status}</span>
-                {canEdit(task) && (
-                  <>
-                    <Link to={`/tasks/${task.id}/edit`} className="btn btn-secondary btn-sm">Edit</Link>
-                    <button className="btn btn-danger btn-sm" onClick={() => handleDelete(task.id)}>
-                      Delete
-                    </button>
-                  </>
-                )}
-              </div>
+
+              {/* Badge */}
+              <span className={`badge badge-${task.status}`} style={{ flexShrink:0 }}>
+                {STATUS_LABEL[task.status]}
+              </span>
+
+              {/* Actions */}
+              {canEdit(task) && (
+                <div style={{ display:"flex", gap:"0.25rem", flexShrink:0, opacity:0, transition:"opacity 0.15s" }}
+                  className="task-actions">
+                  <Link to={`/tasks/${task.id}/edit`} className="btn btn-ghost btn-sm">Edit</Link>
+                  <button className="btn btn-ghost btn-sm" onClick={() => handleDelete(task.id)}
+                    style={{ color:"var(--danger)" }}>
+                    Delete
+                  </button>
+                </div>
+              )}
             </article>
           ))}
         </div>
@@ -197,19 +234,18 @@ export default function TasksList() {
       {/* Pagination */}
       {!loading && totalPages > 1 && (
         <nav className="pagination" aria-label="Pagination">
-          <button className="btn btn-secondary" disabled={currentPage === 1}
-            onClick={() => setOffset(o => Math.max(0, o - LIMIT))} aria-label="Previous page">
-            ← Prev
-          </button>
-          <span style={{ color:"var(--text-secondary)", fontSize:"0.9rem" }}>
-            Page {currentPage} of {totalPages}
-          </span>
-          <button className="btn btn-secondary" disabled={currentPage === totalPages}
-            onClick={() => setOffset(o => o + LIMIT)} aria-label="Next page">
-            Next →
-          </button>
+          <button className="btn btn-secondary btn-sm" disabled={currentPage === 1}
+            onClick={() => setOffset(o => Math.max(0, o - LIMIT))}>← Prev</button>
+          <span>{currentPage} / {totalPages}</span>
+          <button className="btn btn-secondary btn-sm" disabled={currentPage === totalPages}
+            onClick={() => setOffset(o => o + LIMIT)}>Next →</button>
         </nav>
       )}
+
+      {/* Hover reveal for task actions */}
+      <style>{`
+        .task-row:hover .task-actions { opacity: 1 !important; }
+      `}</style>
     </div>
   );
 }

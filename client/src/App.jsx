@@ -11,6 +11,7 @@ import NewProject  from "./pages/NewProject";
 import ProjectsList from "./pages/ProjectsList";
 import AdminPanel  from "./pages/AdminPanel";
 import Weather     from "./pages/Weather";
+import Dashboard from "./pages/Dashboard";
 
 export const AuthContext = createContext(null);
 export const useAuth = () => useContext(AuthContext);
@@ -49,6 +50,7 @@ function Navbar() {
           ) : (
             <>
               <Link to="/login">Login</Link>
+              <Link to="/dashboard">Dashboard</Link>
               <Link to="/register" className="btn btn-primary btn-sm">Sign up</Link>
             </>
           )}
@@ -93,6 +95,7 @@ export default function App() {
             <Route path="/projects"      element={<PrivateRoute><ProjectsList /></PrivateRoute>} />
             <Route path="/projects/new"  element={<PrivateRoute><NewProject /></PrivateRoute>} />
             <Route path="/admin"         element={<AdminRoute><AdminPanel /></AdminRoute>} />
+            <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
           </Routes>
         </main>
       </BrowserRouter>

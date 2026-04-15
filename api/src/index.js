@@ -274,4 +274,31 @@ app.delete("/admin/users/:id", requireAuth, requireRole("admin"), async (req, re
   } catch { res.status(500).json({ error: "Failed to delete user." }); }
 });
 
+// GET /stats — dashboard statistics
+app.get("/stats", requireAuth, async (req, res) => {
+  try {
+    const [total, todo, inProgress, done, projects] = await Promise.all([
+      prisma.task.count(),
+      prisma.task.count({ where: { status: "todo" } }),
+      prisma.task.count({ where: { status: "in-progress" } }),
+      prisma.task.count({ where: { status: "done" } }),
+      prisma.project.count({ where: { userId: req.userId } }),
+    ]);
+    res.json({ total, todo, inProgress, done, projects });
+  } catch { res.status(500).json({ error: "Failed to fetch stats." }); }
+});
+
+app.get("/stats", requireAuth, async (req, res) => {
+  try {
+    const [total, todo, inProgress, done, projects] = await Promise.all([
+      prisma.task.count(),
+      prisma.task.count({ where: { status: "todo" } }),
+      prisma.task.count({ where: { status: "in-progress" } }),
+      prisma.task.count({ where: { status: "done" } }),
+      prisma.project.count({ where: { userId: req.userId } }),
+    ]);
+    res.json({ total, todo, inProgress, done, projects });
+  } catch { res.status(500).json({ error: "Failed to fetch stats." }); }
+});
+
 app.listen(PORT, () => console.log(`API running on http://localhost:${PORT}`));
