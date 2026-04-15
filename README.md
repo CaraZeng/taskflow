@@ -548,3 +548,8 @@ For students who want to go above and beyond:
 4. **Undo/Redo:** Add undo functionality for actions (Reference: Quiz 04)
 5. **Infinite Scroll:** Replace pagination with infinite scroll
 6. **PWA Features:** Add offline support with service workers
+
+## Deployment
+- **Client:** https://tangerine-kheer-dc9b9b.netlify.app
+- **API:** https://final-project-cara.onrender.com
+- **Database:** PostgreSQL hosted on Render
