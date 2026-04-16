@@ -80,7 +80,7 @@ export default function Register() {
               )}
             </div>
           ))}
-          <button className="btn btn-primary" style={{ width: "100%" }} disabled={loading}>
+          <button className="btn btn-primary" style={{ width: "100%", borderRadius: "6px", justifyContent: "center" }} disabled={loading}>
             {loading ? "Creating account…" : "Sign up"}
           </button>
         </form>

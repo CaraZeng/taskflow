@@ -1,16 +1,16 @@
 /* ── CSS Variables ── */
 :root {
-  --bg-primary:    #ffffff;
-  --bg-secondary:  #f7f8fa;
+  --bg-primary:    #f0fdf4;
+  --bg-secondary:  #dcfce7;
   --bg-card:       #ffffff;
+  --border:        #bbf7d0;
   --bg-hover:      #f0f2f5;
   --text-primary:  #0f0f11;
   --text-secondary:#6b7280;
   --text-muted:    #9ca3af;
-  --border:        #e5e7eb;
-  --accent:        #5b6cf8;
-  --accent-hover:  #4757f5;
-  --accent-subtle: #eef0fe;
+  --accent:        #16a34a;
+  --accent-hover:  #15803d;
+  --accent-subtle: #052e16;
   --danger:        #ef4444;
   --danger-subtle: #fef2f2;
   --success:       #10b981;
@@ -31,9 +31,9 @@
   --text-secondary:#a1a1aa;
   --text-muted:    #71717a;
   --border:        #27272a;
-  --accent:        #818cf8;
-  --accent-hover:  #6875f5;
-  --accent-subtle: #1e1b4b;
+  --accent:        #4ade80;
+  --accent-hover:  #22c55e;
+  --accent-subtle: #052e16;
   --danger:        #f87171;
   --danger-subtle: #1f1010;
   --success:       #34d399;
@@ -52,7 +52,7 @@ body {
   color: var(--text-primary);
   transition: background 0.2s, color 0.2s;
   line-height: 1.6;
-  font-size: 14px;
+  font-size: 15px;
   -webkit-font-smoothing: antialiased;
 }
 
@@ -111,7 +111,7 @@ a:hover { color: var(--accent-hover); }
 }
 .btn-primary {
   background: var(--accent); color: #fff;
-  box-shadow: 0 1px 2px rgba(91,108,248,0.3);
+  box-shadow: 0 1px 2px rgba(22,163,74,0.3);
 }
 .btn-primary:hover { background: var(--accent-hover); color: #fff; box-shadow: 0 2px 6px rgba(91,108,248,0.4); }
 .btn-secondary {

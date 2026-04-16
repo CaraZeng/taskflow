@@ -210,10 +210,47 @@ export default function TasksList() {
                 </div>
               </div>
 
-              {/* Badge */}
-              <span className={`badge badge-${task.status}`} style={{ flexShrink:0 }}>
-                {STATUS_LABEL[task.status]}
-              </span>
+              {/* Clickable status badge */}
+              {canEdit(task) ? (
+                <select
+                  value={task.status}
+                  onChange={async e => {
+                    const newStatus = e.target.value;
+                    const prev = [...tasks];
+                    setTasks(t => t.map(x => x.id === task.id ? { ...x, status: newStatus } : x));
+                    try {
+                      const res = await fetch(`${API}/tasks/${task.id}`, {
+                        method: "PUT",
+                        headers: { "Content-Type": "application/json" },
+                        credentials: "include",
+                        body: JSON.stringify({ title: task.title, description: task.description, status: newStatus, dueDate: task.dueDate }),
+                      });
+                      if (!res.ok) throw new Error();
+                    } catch {
+                      setTasks(prev);
+                      showToast("Failed to update status.", "error");
+                    }
+                  }}
+                  style={{
+                    border: "none", borderRadius: "4px", padding: "0.2rem 0.5rem",
+                    fontSize: "11px", fontWeight: 500, cursor: "pointer",
+                    background: task.status === "done" ? "var(--success-subtle)"
+                            : task.status === "in-progress" ? "#fef3c7" : "var(--bg-hover)",
+                    color: task.status === "done" ? "var(--success)"
+                        : task.status === "in-progress" ? "#92400e" : "var(--text-secondary)",
+                    width: "auto",
+                  }}
+                  aria-label="Change task status"
+                >
+                  <option value="todo">○ Todo</option>
+                  <option value="in-progress">◑ In Progress</option>
+                  <option value="done">● Done</option>
+                </select>
+              ) : (
+                <span className={`badge badge-${task.status}`} style={{ flexShrink:0 }}>
+                  {STATUS_LABEL[task.status]}
+                </span>
+              )}
 
               {/* Actions */}
               {canEdit(task) && (

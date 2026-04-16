@@ -11,7 +11,8 @@ import NewProject  from "./pages/NewProject";
 import ProjectsList from "./pages/ProjectsList";
 import AdminPanel  from "./pages/AdminPanel";
 import Weather     from "./pages/Weather";
-import Dashboard from "./pages/Dashboard";
+import Dashboard   from "./pages/Dashboard";
+import CalendarView from "./pages/CalendarView";
 
 export const AuthContext = createContext(null);
 export const useAuth = () => useContext(AuthContext);
@@ -35,23 +36,39 @@ function Navbar() {
   return (
     <nav className="navbar" role="navigation" aria-label="Main navigation">
       <div className="container navbar-inner">
-        <Link to="/" className="navbar-brand">✅ TaskFlow</Link>
+        <Link to="/" className="navbar-brand">
+  <span style={{
+    background: "var(--accent)",
+    color: "#fff",
+    borderRadius: "6px",
+    padding: "0.15rem 0.4rem",
+    fontWeight: 800,
+    fontSize: "13px",
+    letterSpacing: "-0.01em",
+    marginRight: "0.1rem",
+  }}>T</span>
+  TaskFlow
+</Link>
         <div className="navbar-links">
-          <Link to="/tasks">Tasks</Link>
-          <Link to="/weather">🌤 Weather</Link>
           {user ? (
             <>
+              <Link to="/dashboard">Dashboard</Link>
+              <Link to="/tasks">Tasks</Link>
+              <Link to="/calendar">Calendar</Link>
               <Link to="/projects">Projects</Link>
-              <Link to="/tasks/new" className="btn btn-primary btn-sm">+ Task</Link>
-              {user.role === "admin" && <Link to="/admin" className="btn btn-secondary btn-sm">Admin</Link>}
-              <span style={{ color: "var(--text-secondary)", fontSize: "0.85rem" }}>{user.name}</span>
+              <Link to="/weather">🌤 Weather</Link>
+              {user.role === "admin" && (
+                <Link to="/admin" className="btn btn-secondary btn-sm">Admin</Link>
+              )}
+              <span style={{ color: "var(--text-muted)", fontSize: "12.5px" }}>{user.name}</span>
               <button className="btn btn-secondary btn-sm" onClick={logout}>Logout</button>
             </>
           ) : (
             <>
+              <Link to="/tasks">Tasks</Link>
+              <Link to="/weather">🌤 Weather</Link>
               <Link to="/login">Login</Link>
-              <Link to="/dashboard">Dashboard</Link>
-              <Link to="/register" className="btn btn-primary btn-sm">Sign up</Link>
+              <Link to="/register" className="btn btn-primary btn-sm" style={{ color: "#fff" }}>Sign up</Link>
             </>
           )}
           <ThemeToggle />
@@ -62,7 +79,7 @@ function Navbar() {
 }
 
 export default function App() {
-  const [user, setUser]     = useState(null);
+  const [user, setUser]       = useState(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
@@ -85,17 +102,18 @@ export default function App() {
         <Navbar />
         <main className="container" style={{ padding: "2rem 1.25rem" }}>
           <Routes>
-            <Route path="/"              element={<Home />} />
-            <Route path="/login"         element={<Login />} />
-            <Route path="/register"      element={<Register />} />
-            <Route path="/tasks"         element={<TasksList />} />
-            <Route path="/weather"       element={<Weather />} />
-            <Route path="/tasks/new"     element={<PrivateRoute><NewTask /></PrivateRoute>} />
+            <Route path="/"               element={<Home />} />
+            <Route path="/login"          element={<Login />} />
+            <Route path="/register"       element={<Register />} />
+            <Route path="/tasks"          element={<TasksList />} />
+            <Route path="/weather"        element={<Weather />} />
+            <Route path="/tasks/new"      element={<PrivateRoute><NewTask /></PrivateRoute>} />
             <Route path="/tasks/:id/edit" element={<PrivateRoute><EditTask /></PrivateRoute>} />
-            <Route path="/projects"      element={<PrivateRoute><ProjectsList /></PrivateRoute>} />
-            <Route path="/projects/new"  element={<PrivateRoute><NewProject /></PrivateRoute>} />
-            <Route path="/admin"         element={<AdminRoute><AdminPanel /></AdminRoute>} />
-            <Route path="/dashboard" element={<PrivateRoute><Dashboard /></PrivateRoute>} />
+            <Route path="/projects"       element={<PrivateRoute><ProjectsList /></PrivateRoute>} />
+            <Route path="/projects/new"   element={<PrivateRoute><NewProject /></PrivateRoute>} />
+            <Route path="/admin"          element={<AdminRoute><AdminPanel /></AdminRoute>} />
+            <Route path="/dashboard"      element={<PrivateRoute><Dashboard /></PrivateRoute>} />
+            <Route path="/calendar" element={<CalendarView />} />
           </Routes>
         </main>
       </BrowserRouter>
