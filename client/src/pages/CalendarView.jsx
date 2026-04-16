@@ -50,6 +50,19 @@ export default function CalendarView() {
     setError(""); setModal(true);
   };
 
+  const handleDeleteTask = async (taskId) => {
+  const prev = [...tasks];
+  setTasks(t => t.filter(x => x.id !== taskId));
+  try {
+    const res = await apiFetch(`/tasks/${taskId}`, { method: "DELETE" });
+    if (!res.ok) throw new Error();
+    showToast("Task deleted.", "success");
+  } catch {
+    setTasks(prev);
+    showToast("Failed to delete task.", "error");
+  }
+};
+
   const handleCreate = async () => {
     if (!form.title.trim() || form.title.trim().length < 2) return setError("Title must be at least 2 characters.");
     if (!form.projectId) return setError("Please select a project.");
@@ -126,14 +139,19 @@ export default function CalendarView() {
                       marginBottom:4,
                     }}>{d}</span>
                     <div style={{ display:"flex", flexDirection:"column", gap:2 }}>
-                      {dayTasks.slice(0,3).map(t => (
-                        <div key={t.id} style={{
-                          fontSize:11, padding:"1px 5px", borderRadius:3,
-                          background: t.status === "done" ? "var(--success-subtle)" : t.status === "in-progress" ? "#fef3c7" : "var(--accent-subtle)",
-                          color: t.status === "done" ? "var(--success)" : t.status === "in-progress" ? "#92400e" : "var(--accent)",
-                          overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", fontWeight:500,
-                        }}>{t.title}</div>
-                      ))}
+                    {dayTasks.slice(0,3).map(t => (
+                    <div key={t.id}
+                        onClick={e => { e.stopPropagation(); if (window.confirm(`Delete "${t.title}"?`)) handleDeleteTask(t.id); }}
+                        style={{
+                        fontSize:11, padding:"1px 5px", borderRadius:3,
+                        background: t.status === "done" ? "var(--success-subtle)" : t.status === "in-progress" ? "#fef3c7" : "var(--accent-subtle)",
+                        color: t.status === "done" ? "var(--success)" : t.status === "in-progress" ? "#92400e" : "var(--accent)",
+                        overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap", fontWeight:500,
+                        cursor:"pointer",
+                        }}
+                        title="Click to delete"
+                    >{t.title}</div>
+                    ))}
                       {dayTasks.length > 3 && <span style={{ fontSize:10.5, color:"var(--text-muted)", paddingLeft:3 }}>+{dayTasks.length-3} more</span>}
                     </div>
                   </>
