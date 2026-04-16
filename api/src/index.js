@@ -11,7 +11,14 @@ const app = express();
 const prisma = new PrismaClient();
 const PORT = process.env.PORT || 3000;
 
-app.use(cors({ origin: process.env.CLIENT_URL || "http://localhost:5173", credentials: true }));
+app.use(cors({
+  origin: [
+    process.env.CLIENT_URL || "http://localhost:5173",
+    "http://localhost:5173",
+    "https://tangerine-kheer-dc9b9b.netlify.app"
+  ],
+  credentials: true
+}));
 app.use(express.json());
 app.use(cookieParser());
 
