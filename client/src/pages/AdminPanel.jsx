@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
-
-const API = import.meta.env.VITE_API_URL || "http://localhost:3000";
+import { apiFetch } from "../api";
 
 export default function AdminPanel() {
   const [users, setUsers]     = useState([]);
@@ -16,7 +15,7 @@ export default function AdminPanel() {
   const fetchUsers = async () => {
     setLoading(true); setError(null);
     try {
-      const res = await fetch(`${API}/admin/users`, { credentials: "include" });
+      const res = await apiFetch("/admin/users");
       if (!res.ok) throw new Error("Failed to load users.");
       setUsers(await res.json());
     } catch (err) { setError(err.message); }
@@ -30,10 +29,8 @@ export default function AdminPanel() {
     const prev = [...users];
     setUsers(u => u.map(x => x.id === user.id ? { ...x, role: newRole } : x));
     try {
-      const res = await fetch(`${API}/admin/users/${user.id}/role`, {
+      const res = await apiFetch(`/admin/users/${user.id}/role`, {
         method: "PUT",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
         body: JSON.stringify({ role: newRole }),
       });
       if (!res.ok) throw new Error();
@@ -49,7 +46,7 @@ export default function AdminPanel() {
     const prev = [...users];
     setUsers(u => u.filter(x => x.id !== user.id));
     try {
-      const res = await fetch(`${API}/admin/users/${user.id}`, { method: "DELETE", credentials: "include" });
+      const res = await apiFetch(`/admin/users/${user.id}`, { method: "DELETE" });
       if (!res.ok) throw new Error();
       showToast(`${user.name} deleted.`);
     } catch {
@@ -61,7 +58,7 @@ export default function AdminPanel() {
   if (loading) return <div className="spinner-wrap"><div className="spinner" /></div>;
   if (error) return (
     <div className="error-state" role="alert">
-      <p>⚠️ {error}</p>
+      <p>⚠ {error}</p>
       <button className="btn btn-secondary" onClick={fetchUsers}>Try Again</button>
     </div>
   );
@@ -74,33 +71,27 @@ export default function AdminPanel() {
           <button onClick={() => setToast(null)} aria-label="Dismiss">×</button>
         </div>
       )}
-      <h1 style={{ fontSize: "1.5rem", marginBottom: "1.5rem" }}>
+      <h1 style={{ fontSize:"1.3rem", fontWeight:600, marginBottom:"1.5rem" }}>
         Admin Panel — Users ({users.length})
       </h1>
       {users.length === 0 ? (
         <div className="empty-state"><p>No users found.</p></div>
       ) : (
-        <div style={{ display: "grid", gap: "0.75rem" }}>
+        <div style={{ display:"grid", gap:"0.75rem" }}>
           {users.map(u => (
-            <div key={u.id} className="card" style={{ display: "flex", justifyContent: "space-between", alignItems: "center", flexWrap: "wrap", gap: "0.75rem" }}>
+            <div key={u.id} className="card" style={{ display:"flex", justifyContent:"space-between", alignItems:"center", flexWrap:"wrap", gap:"0.75rem" }}>
               <div>
                 <strong>{u.name}</strong>
-                <span style={{ marginLeft: "0.5rem", fontSize: "0.85rem", color: "var(--text-secondary)" }}>
-                  {u.email}
-                </span>
-                <div style={{ marginTop: "0.2rem" }}>
-                  <span className={`badge ${u.role === "admin" ? "badge-in-progress" : "badge-todo"}`}>
-                    {u.role}
-                  </span>
+                <span style={{ marginLeft:"0.5rem", fontSize:"0.85rem", color:"var(--text-secondary)" }}>{u.email}</span>
+                <div style={{ marginTop:"0.2rem" }}>
+                  <span className={`badge ${u.role === "admin" ? "badge-in-progress" : "badge-todo"}`}>{u.role}</span>
                 </div>
               </div>
-              <div style={{ display: "flex", gap: "0.5rem" }}>
+              <div style={{ display:"flex", gap:"0.5rem" }}>
                 <button className="btn btn-secondary btn-sm" onClick={() => toggleRole(u)}>
                   Make {u.role === "admin" ? "User" : "Admin"}
                 </button>
-                <button className="btn btn-danger btn-sm" onClick={() => deleteUser(u)}>
-                  Delete
-                </button>
+                <button className="btn btn-danger btn-sm" onClick={() => deleteUser(u)}>Delete</button>
               </div>
             </div>
           ))}

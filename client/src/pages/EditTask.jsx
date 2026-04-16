@@ -1,7 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate, useParams } from "react-router-dom";
-
-const API = import.meta.env.VITE_API_URL || "http://localhost:3000";
+import { apiFetch } from "../api";
 
 function validate(f) {
   const e = {};
@@ -20,7 +19,7 @@ export default function EditTask() {
   const [serverError, setServerError] = useState("");
 
   useEffect(() => {
-    fetch(`${API}/tasks/${id}`, { credentials:"include" })
+    apiFetch(`/tasks/${id}`)
       .then(r => r.json())
       .then(task => {
         setFields({
@@ -35,20 +34,17 @@ export default function EditTask() {
   }, [id]);
 
   const errors = validate(fields);
-  const set = k => e => setFields(f => ({ ...f, [k]: e.target.value }));
+  const set  = k => e => setFields(f => ({ ...f, [k]: e.target.value }));
   const blur = k => () => setTouched(t => ({ ...t, [k]: true }));
 
   const handleSubmit = async e => {
     e.preventDefault();
     setTouched({ title:true, dueDate:true });
     if (Object.keys(errors).length) return;
-    setSaving(true);
-    setServerError("");
+    setSaving(true); setServerError("");
     try {
-      const res = await fetch(`${API}/tasks/${id}`, {
+      const res = await apiFetch(`/tasks/${id}`, {
         method: "PUT",
-        headers: { "Content-Type":"application/json" },
-        credentials: "include",
         body: JSON.stringify(fields),
       });
       const data = await res.json();
@@ -62,7 +58,7 @@ export default function EditTask() {
 
   return (
     <div style={{ maxWidth:560 }}>
-      <h1 style={{ fontSize:"1.5rem", marginBottom:"1.5rem" }}>Edit Task</h1>
+      <h1 style={{ fontSize:"1.3rem", fontWeight:600, marginBottom:"1.5rem" }}>Edit Task</h1>
       {serverError && <p className="field-error" style={{ marginBottom:"1rem" }}>{serverError}</p>}
       <form onSubmit={handleSubmit} noValidate className="card">
         <div className="form-group">
@@ -80,9 +76,9 @@ export default function EditTask() {
           <div className="form-group">
             <label htmlFor="status">Status</label>
             <select id="status" value={fields.status} onChange={set("status")}>
-              <option value="todo">To Do</option>
-              <option value="in-progress">In Progress</option>
-              <option value="done">Done</option>
+              <option value="todo">○ Todo</option>
+              <option value="in-progress">◑ In Progress</option>
+              <option value="done">● Done</option>
             </select>
           </div>
           <div className="form-group">

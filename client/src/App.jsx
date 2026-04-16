@@ -1,17 +1,18 @@
 import { BrowserRouter, Routes, Route, Link, Navigate } from "react-router-dom";
 import { useState, useEffect, createContext, useContext } from "react";
 import ThemeToggle from "./components/ThemeToggle";
-import Home        from "./pages/Home";
-import Login       from "./pages/Login";
-import Register    from "./pages/Register";
-import TasksList   from "./pages/TasksList";
-import NewTask     from "./pages/NewTask";
-import EditTask    from "./pages/EditTask";
-import NewProject  from "./pages/NewProject";
+import { apiFetch, setToken, getToken } from "./api";
+import Home         from "./pages/Home";
+import Login        from "./pages/Login";
+import Register     from "./pages/Register";
+import TasksList    from "./pages/TasksList";
+import NewTask      from "./pages/NewTask";
+import EditTask     from "./pages/EditTask";
+import NewProject   from "./pages/NewProject";
 import ProjectsList from "./pages/ProjectsList";
-import AdminPanel  from "./pages/AdminPanel";
-import Weather     from "./pages/Weather";
-import Dashboard   from "./pages/Dashboard";
+import AdminPanel   from "./pages/AdminPanel";
+import Weather      from "./pages/Weather";
+import Dashboard    from "./pages/Dashboard";
 import CalendarView from "./pages/CalendarView";
 
 export const AuthContext = createContext(null);
@@ -37,18 +38,13 @@ function Navbar() {
     <nav className="navbar" role="navigation" aria-label="Main navigation">
       <div className="container navbar-inner">
         <Link to="/" className="navbar-brand">
-  <span style={{
-    background: "var(--accent)",
-    color: "#fff",
-    borderRadius: "6px",
-    padding: "0.15rem 0.4rem",
-    fontWeight: 800,
-    fontSize: "13px",
-    letterSpacing: "-0.01em",
-    marginRight: "0.1rem",
-  }}>T</span>
-  TaskFlow
-</Link>
+          <span style={{
+            background: "var(--accent)", color: "#fff",
+            borderRadius: "6px", padding: "0.15rem 0.4rem",
+            fontWeight: 800, fontSize: "13px", marginRight: "0.1rem",
+          }}>T</span>
+          TaskFlow
+        </Link>
         <div className="navbar-links">
           {user ? (
             <>
@@ -83,16 +79,15 @@ export default function App() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    fetch(`${import.meta.env.VITE_API_URL || "http://localhost:3000"}/me`, { credentials: "include" })
+    if (!getToken()) { setLoading(false); return; }
+    apiFetch("/me")
       .then(r => r.ok ? r.json() : null)
       .then(data => { setUser(data); setLoading(false); })
       .catch(() => setLoading(false));
   }, []);
 
-  const logout = async () => {
-    await fetch(`${import.meta.env.VITE_API_URL || "http://localhost:3000"}/logout`, {
-      method: "POST", credentials: "include",
-    });
+  const logout = () => {
+    setToken(null);
     setUser(null);
   };
 
@@ -107,13 +102,13 @@ export default function App() {
             <Route path="/register"       element={<Register />} />
             <Route path="/tasks"          element={<TasksList />} />
             <Route path="/weather"        element={<Weather />} />
+            <Route path="/calendar"       element={<CalendarView />} />
             <Route path="/tasks/new"      element={<PrivateRoute><NewTask /></PrivateRoute>} />
             <Route path="/tasks/:id/edit" element={<PrivateRoute><EditTask /></PrivateRoute>} />
             <Route path="/projects"       element={<PrivateRoute><ProjectsList /></PrivateRoute>} />
             <Route path="/projects/new"   element={<PrivateRoute><NewProject /></PrivateRoute>} />
             <Route path="/admin"          element={<AdminRoute><AdminPanel /></AdminRoute>} />
             <Route path="/dashboard"      element={<PrivateRoute><Dashboard /></PrivateRoute>} />
-            <Route path="/calendar" element={<CalendarView />} />
           </Routes>
         </main>
       </BrowserRouter>

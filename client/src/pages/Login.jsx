@@ -1,16 +1,16 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../App";
+import { apiFetch, setToken } from "../api";
 
 export default function Login() {
   const { setUser } = useAuth();
   const nav = useNavigate();
-
-  const [email, setEmail] = useState("");
+  const [email, setEmail]       = useState("");
   const [password, setPassword] = useState("");
-  const [errors, setErrors] = useState({});
+  const [errors, setErrors]     = useState({});
   const [serverError, setServerError] = useState("");
-  const [loading, setLoading] = useState(false);
+  const [loading, setLoading]   = useState(false);
 
   const validate = () => {
     const e = {};
@@ -24,25 +24,20 @@ export default function Login() {
     const e = validate();
     setErrors(e);
     if (Object.keys(e).length) return;
-
     setLoading(true);
     setServerError("");
     try {
-      const res = await fetch("http://localhost:3000/login", {
+      const res = await apiFetch("/login", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
         body: JSON.stringify({ email, password }),
       });
       const data = await res.json();
       if (!res.ok) return setServerError(data.error || "Login failed.");
+      setToken(data.token);
       setUser(data);
-      nav("/tasks");
-    } catch {
-      setServerError("Network error. Please try again.");
-    } finally {
-      setLoading(false);
-    }
+      nav("/dashboard");
+    } catch { setServerError("Network error. Please try again."); }
+    finally { setLoading(false); }
   };
 
   return (
@@ -65,7 +60,7 @@ export default function Login() {
               className={errors.password ? "error" : ""} />
             {errors.password && <span className="field-error">{errors.password}</span>}
           </div>
-          <button className="btn btn-primary" style={{ width: "100%", borderRadius: "6px", justifyContent: "center" }} disabled={loading}>
+          <button className="btn btn-primary" style={{ width: "100%", justifyContent: "center", borderRadius: "6px" }} disabled={loading}>
             {loading ? "Logging in…" : "Log in"}
           </button>
         </form>

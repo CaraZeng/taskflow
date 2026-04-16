@@ -22,10 +22,10 @@ app.use(cors({
 app.use(express.json());
 app.use(cookieParser());
 
-// ── Health ───────────────────────────────────────────────────────────────────
+// ── Health ────────────────────────────────────────────────────────────────────
 app.get("/ping", (req, res) => res.json({ message: "pong" }));
 
-// ── Auth ─────────────────────────────────────────────────────────────────────
+// ── Auth ──────────────────────────────────────────────────────────────────────
 app.post("/register", async (req, res) => {
   const { email, password, name } = req.body;
   if (!email || !password || !name)
@@ -46,13 +46,7 @@ app.post("/register", async (req, res) => {
       data: { email, password: hashed, name: name.trim(), role: "user" },
     });
     const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET, { expiresIn: "7d" });
-    res.cookie("token", token, {
-  httpOnly: true,
-  sameSite: "none",
-  secure: true,
-  maxAge: 7 * 24 * 60 * 60 * 1000,
-});
-    res.status(201).json({ id: user.id, email: user.email, name: user.name, role: user.role });
+    res.status(201).json({ id: user.id, email: user.email, name: user.name, role: user.role, token });
   } catch { res.status(500).json({ error: "Internal server error." }); }
 });
 
@@ -65,17 +59,14 @@ app.post("/login", async (req, res) => {
     if (!user || !(await bcrypt.compare(password, user.password)))
       return res.status(401).json({ error: "Invalid credentials." });
     const token = jwt.sign({ userId: user.id }, process.env.JWT_SECRET, { expiresIn: "7d" });
-    res.cookie("token", token, {
-  httpOnly: true,
-  sameSite: "none",
-  secure: true,
-  maxAge: 7 * 24 * 60 * 60 * 1000,
-});
-    res.json({ id: user.id, email: user.email, name: user.name, role: user.role });
+    res.json({ id: user.id, email: user.email, name: user.name, role: user.role, token });
   } catch { res.status(500).json({ error: "Internal server error." }); }
 });
 
-app.post("/logout", (req, res) => { res.clearCookie("token"); res.json({ message: "Logged out." }); });
+app.post("/logout", (req, res) => {
+  res.clearCookie("token");
+  res.json({ message: "Logged out." });
+});
 
 app.get("/me", requireAuth, async (req, res) => {
   try {
@@ -88,7 +79,7 @@ app.get("/me", requireAuth, async (req, res) => {
   } catch { res.status(500).json({ error: "Internal server error." }); }
 });
 
-// ── Projects ─────────────────────────────────────────────────────────────────
+// ── Projects ──────────────────────────────────────────────────────────────────
 app.get("/projects", requireAuth, async (req, res) => {
   try {
     const projects = await prisma.project.findMany({
@@ -144,18 +135,15 @@ app.delete("/projects/:id", requireAuth, async (req, res) => {
   } catch { res.status(500).json({ error: "Failed to delete project." }); }
 });
 
-// ── Tasks ────────────────────────────────────────────────────────────────────
-// GET /tasks?limit=&offset=&search=&status=
+// ── Tasks ─────────────────────────────────────────────────────────────────────
 app.get("/tasks", async (req, res) => {
   const limit  = Math.min(parseInt(req.query.limit)  || 10, 50);
   const offset = parseInt(req.query.offset) || 0;
   const search = req.query.search?.trim() || "";
   const status = req.query.status || "";
-
-  const where = {};
+  const where  = {};
   if (search) where.title = { contains: search, mode: "insensitive" };
   if (status) where.status = status;
-
   try {
     const [tasks, total] = await Promise.all([
       prisma.task.findMany({
@@ -219,10 +207,7 @@ app.put("/tasks/:id", requireAuth, async (req, res) => {
   if (dueDate && isNaN(Date.parse(dueDate)))
     return res.status(400).json({ error: "Invalid due date." });
   try {
-    const task = await prisma.task.findUnique({
-      where: { id },
-      include: { project: true },
-    });
+    const task = await prisma.task.findUnique({ where: { id }, include: { project: true } });
     if (!task) return res.status(404).json({ error: "Task not found." });
     const user = await prisma.user.findUnique({ where: { id: req.userId } });
     if (task.project.userId !== req.userId && user.role !== "admin")
@@ -253,7 +238,7 @@ app.delete("/tasks/:id", requireAuth, async (req, res) => {
   } catch { res.status(500).json({ error: "Failed to delete task." }); }
 });
 
-// ── Admin ────────────────────────────────────────────────────────────────────
+// ── Admin ─────────────────────────────────────────────────────────────────────
 app.get("/admin/users", requireAuth, requireRole("admin"), async (req, res) => {
   try {
     const users = await prisma.user.findMany({
@@ -291,20 +276,7 @@ app.delete("/admin/users/:id", requireAuth, requireRole("admin"), async (req, re
   } catch { res.status(500).json({ error: "Failed to delete user." }); }
 });
 
-// GET /stats — dashboard statistics
-app.get("/stats", requireAuth, async (req, res) => {
-  try {
-    const [total, todo, inProgress, done, projects] = await Promise.all([
-      prisma.task.count(),
-      prisma.task.count({ where: { status: "todo" } }),
-      prisma.task.count({ where: { status: "in-progress" } }),
-      prisma.task.count({ where: { status: "done" } }),
-      prisma.project.count({ where: { userId: req.userId } }),
-    ]);
-    res.json({ total, todo, inProgress, done, projects });
-  } catch { res.status(500).json({ error: "Failed to fetch stats." }); }
-});
-
+// ── Stats ─────────────────────────────────────────────────────────────────────
 app.get("/stats", requireAuth, async (req, res) => {
   try {
     const [total, todo, inProgress, done, projects] = await Promise.all([

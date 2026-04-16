@@ -1,8 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { Link } from "react-router-dom";
 import { useAuth } from "../App";
+import { apiFetch } from "../api";
 
-const API = import.meta.env.VITE_API_URL || "http://localhost:3000";
 const LIMIT = 10;
 
 function useDebouncedValue(value, delay) {
@@ -14,7 +14,7 @@ function useDebouncedValue(value, delay) {
   return debounced;
 }
 
-const STATUS_ICON = { todo: "○", "in-progress": "◑", done: "●" };
+const STATUS_ICON  = { todo: "○", "in-progress": "◑", done: "●" };
 const STATUS_LABEL = { todo: "Todo", "in-progress": "In Progress", done: "Done" };
 
 export default function TasksList() {
@@ -41,7 +41,7 @@ export default function TasksList() {
       const p = new URLSearchParams({ limit: LIMIT, offset: off });
       if (srch) p.set("search", srch);
       if (stat) p.set("status", stat);
-      const res = await fetch(`${API}/tasks?${p}`, { credentials: "include" });
+      const res = await apiFetch(`/tasks?${p}`);
       if (!res.ok) throw new Error("Failed to load tasks.");
       const data = await res.json();
       setTasks(data.tasks);
@@ -66,12 +66,27 @@ export default function TasksList() {
     setTasks(t => t.filter(x => x.id !== taskId));
     setTotal(n => n - 1);
     try {
-      const res = await fetch(`${API}/tasks/${taskId}`, { method: "DELETE", credentials: "include" });
+      const res = await apiFetch(`/tasks/${taskId}`, { method: "DELETE" });
       if (!res.ok) throw new Error();
       showToast("Task deleted.", "success");
     } catch {
       setTasks(prev); setTotal(prevT);
       showToast("Failed to delete task.", "error");
+    }
+  };
+
+  const handleStatusChange = async (task, newStatus) => {
+    const prev = [...tasks];
+    setTasks(t => t.map(x => x.id === task.id ? { ...x, status: newStatus } : x));
+    try {
+      const res = await apiFetch(`/tasks/${task.id}`, {
+        method: "PUT",
+        body: JSON.stringify({ title: task.title, description: task.description, status: newStatus, dueDate: task.dueDate }),
+      });
+      if (!res.ok) throw new Error();
+    } catch {
+      setTasks(prev);
+      showToast("Failed to update status.", "error");
     }
   };
 
@@ -88,40 +103,24 @@ export default function TasksList() {
         </div>
       )}
 
-      {/* Header */}
       <div style={{ display:"flex", justifyContent:"space-between", alignItems:"center", marginBottom:"1.25rem", flexWrap:"wrap", gap:"0.75rem" }}>
         <div>
           <h1 style={{ fontSize:"1.3rem", fontWeight:600, letterSpacing:"-0.02em" }}>Tasks</h1>
           {!loading && (
             <p style={{ fontSize:"12px", color:"var(--text-muted)", marginTop:"2px" }}>
-              {total} task{total !== 1 ? "s" : ""}
-              {(search || statusFilter) ? " matching filters" : " total"}
+              {total} task{total !== 1 ? "s" : ""}{(search || statusFilter) ? " matching filters" : " total"}
             </p>
           )}
         </div>
-        {user && (
-          <Link to="/tasks/new" className="btn btn-primary">
-            <span style={{ fontSize:"16px", lineHeight:1 }}>+</span> New Task
-          </Link>
-        )}
+        {user && <Link to="/tasks/new" className="btn btn-primary">+ New Task</Link>}
       </div>
 
-      {/* Search + Filter */}
       <div className="search-bar" role="search">
-        <input
-          type="search"
-          placeholder="Search tasks…"
-          value={search}
-          onChange={e => setSearch(e.target.value)}
-          aria-label="Search tasks"
-          style={{ fontSize:"13px" }}
-        />
-        <select
-          value={statusFilter}
-          onChange={e => setStatus(e.target.value)}
-          aria-label="Filter by status"
-          style={{ fontSize:"13px" }}
-        >
+        <input type="search" placeholder="Search tasks…" value={search}
+          onChange={e => setSearch(e.target.value)} aria-label="Search tasks"
+          style={{ fontSize:"13px" }} />
+        <select value={statusFilter} onChange={e => setStatus(e.target.value)}
+          aria-label="Filter by status" style={{ fontSize:"13px" }}>
           <option value="">All statuses</option>
           <option value="todo">○ Todo</option>
           <option value="in-progress">◑ In Progress</option>
@@ -129,24 +128,15 @@ export default function TasksList() {
         </select>
       </div>
 
-      {/* Loading */}
-      {loading && (
-        <div className="spinner-wrap" aria-busy="true">
-          <div className="spinner" />
-        </div>
-      )}
+      {loading && <div className="spinner-wrap" aria-busy="true"><div className="spinner" /></div>}
 
-      {/* Error */}
       {!loading && error && (
         <div className="error-state" role="alert">
           <p>⚠ {error}</p>
-          <button className="btn btn-secondary" onClick={() => fetchTasks(offset, debouncedSearch, statusFilter)}>
-            Try Again
-          </button>
+          <button className="btn btn-secondary" onClick={() => fetchTasks(offset, debouncedSearch, statusFilter)}>Try Again</button>
         </div>
       )}
 
-      {/* Empty */}
       {!loading && !error && tasks.length === 0 && (
         <div className="empty-state">
           <p style={{ fontSize:"28px", marginBottom:"0.5rem" }}>○</p>
@@ -154,55 +144,37 @@ export default function TasksList() {
             {search || statusFilter ? "No tasks match your search." : "No tasks yet."}
           </p>
           {user && !search && !statusFilter && (
-            <Link to="/tasks/new" className="btn btn-primary" style={{ marginTop:"0.75rem" }}>
-              Create your first task
-            </Link>
+            <Link to="/tasks/new" className="btn btn-primary" style={{ marginTop:"0.75rem" }}>Create your first task</Link>
           )}
         </div>
       )}
 
-      {/* Task list — Linear style */}
       {!loading && !error && tasks.length > 0 && (
         <div className="task-list">
           {tasks.map(task => (
-            <article key={task.id} className="task-row" style={{ gap:"0.75rem" }}>
-
-              {/* Status icon */}
-              <span
-                style={{
-                  fontSize:"14px", flexShrink:0,
-                  color: task.status === "done" ? "var(--success)"
-                       : task.status === "in-progress" ? "var(--warning)"
-                       : "var(--text-muted)",
-                }}
-                title={STATUS_LABEL[task.status]}
-              >
+            <article key={task.id} className="task-row">
+              <span style={{
+                fontSize:"14px", flexShrink:0,
+                color: task.status === "done" ? "var(--success)"
+                     : task.status === "in-progress" ? "var(--warning)" : "var(--text-muted)",
+              }}>
                 {STATUS_ICON[task.status]}
               </span>
-
-              {/* Title + meta */}
               <div style={{ flex:1, minWidth:0 }}>
                 <span style={{
-                  fontWeight: 450,
-                  fontSize: "13.5px",
+                  fontWeight:450, fontSize:"13.5px",
                   color: task.status === "done" ? "var(--text-muted)" : "var(--text-primary)",
                   textDecoration: task.status === "done" ? "line-through" : "none",
-                  display: "block",
-                  overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap",
+                  display:"block", overflow:"hidden", textOverflow:"ellipsis", whiteSpace:"nowrap",
                 }}>
                   {task.title}
                 </span>
                 <div style={{ display:"flex", gap:"0.75rem", marginTop:"2px", flexWrap:"wrap" }}>
-                  {task.project && (
-                    <span style={{ fontSize:"11.5px", color:"var(--text-muted)" }}>
-                      {task.project.title}
-                    </span>
-                  )}
+                  {task.project && <span style={{ fontSize:"11.5px", color:"var(--text-muted)" }}>{task.project.title}</span>}
                   {task.dueDate && (
                     <span style={{
                       fontSize:"11.5px",
-                      color: new Date(task.dueDate) < new Date() && task.status !== "done"
-                        ? "var(--danger)" : "var(--text-muted)",
+                      color: new Date(task.dueDate) < new Date() && task.status !== "done" ? "var(--danger)" : "var(--text-muted)",
                     }}>
                       {new Date(task.dueDate).toLocaleDateString("en-US", { month:"short", day:"numeric" })}
                     </span>
@@ -210,57 +182,30 @@ export default function TasksList() {
                 </div>
               </div>
 
-              {/* Clickable status badge */}
               {canEdit(task) ? (
-                <select
-                  value={task.status}
-                  onChange={async e => {
-                    const newStatus = e.target.value;
-                    const prev = [...tasks];
-                    setTasks(t => t.map(x => x.id === task.id ? { ...x, status: newStatus } : x));
-                    try {
-                      const res = await fetch(`${API}/tasks/${task.id}`, {
-                        method: "PUT",
-                        headers: { "Content-Type": "application/json" },
-                        credentials: "include",
-                        body: JSON.stringify({ title: task.title, description: task.description, status: newStatus, dueDate: task.dueDate }),
-                      });
-                      if (!res.ok) throw new Error();
-                    } catch {
-                      setTasks(prev);
-                      showToast("Failed to update status.", "error");
-                    }
-                  }}
+                <select value={task.status}
+                  onChange={e => handleStatusChange(task, e.target.value)}
                   style={{
-                    border: "none", borderRadius: "4px", padding: "0.2rem 0.5rem",
-                    fontSize: "11px", fontWeight: 500, cursor: "pointer",
+                    border:"1px solid var(--border)", borderRadius:"4px", padding:"0.2rem 0.5rem",
+                    fontSize:"11px", fontWeight:500, cursor:"pointer", width:"auto",
                     background: task.status === "done" ? "var(--success-subtle)"
-                            : task.status === "in-progress" ? "#fef3c7" : "var(--bg-hover)",
+                               : task.status === "in-progress" ? "#fef3c7" : "var(--bg-hover)",
                     color: task.status === "done" ? "var(--success)"
-                        : task.status === "in-progress" ? "#92400e" : "var(--text-secondary)",
-                    width: "auto",
+                         : task.status === "in-progress" ? "#92400e" : "var(--text-secondary)",
                   }}
-                  aria-label="Change task status"
-                >
+                  aria-label="Change task status">
                   <option value="todo">○ Todo</option>
                   <option value="in-progress">◑ In Progress</option>
                   <option value="done">● Done</option>
                 </select>
               ) : (
-                <span className={`badge badge-${task.status}`} style={{ flexShrink:0 }}>
-                  {STATUS_LABEL[task.status]}
-                </span>
+                <span className={`badge badge-${task.status}`}>{STATUS_LABEL[task.status]}</span>
               )}
 
-              {/* Actions */}
               {canEdit(task) && (
-                <div style={{ display:"flex", gap:"0.25rem", flexShrink:0, opacity:0, transition:"opacity 0.15s" }}
-                  className="task-actions">
+                <div style={{ display:"flex", gap:"0.25rem", flexShrink:0, opacity:0, transition:"opacity 0.15s" }} className="task-actions">
                   <Link to={`/tasks/${task.id}/edit`} className="btn btn-ghost btn-sm">Edit</Link>
-                  <button className="btn btn-ghost btn-sm" onClick={() => handleDelete(task.id)}
-                    style={{ color:"var(--danger)" }}>
-                    Delete
-                  </button>
+                  <button className="btn btn-ghost btn-sm" style={{ color:"var(--danger)" }} onClick={() => handleDelete(task.id)}>Delete</button>
                 </div>
               )}
             </article>
@@ -268,7 +213,6 @@ export default function TasksList() {
         </div>
       )}
 
-      {/* Pagination */}
       {!loading && totalPages > 1 && (
         <nav className="pagination" aria-label="Pagination">
           <button className="btn btn-secondary btn-sm" disabled={currentPage === 1}
@@ -279,10 +223,7 @@ export default function TasksList() {
         </nav>
       )}
 
-      {/* Hover reveal for task actions */}
-      <style>{`
-        .task-row:hover .task-actions { opacity: 1 !important; }
-      `}</style>
+      <style>{`.task-row:hover .task-actions { opacity: 1 !important; }`}</style>
     </div>
   );
 }

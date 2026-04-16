@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { Link, useNavigate } from "react-router-dom";
 import { useAuth } from "../App";
+import { apiFetch, setToken } from "../api";
 
 function validate(fields) {
   const errors = {};
@@ -11,7 +12,7 @@ function validate(fields) {
   if (fields.password.length < 8)
     errors.password = "Password must be at least 8 characters.";
   if (!/[A-Z]/.test(fields.password))
-    errors.password = (errors.password || "") + " Must include an uppercase letter.";
+    errors.password = (errors.password ? errors.password + " " : "") + "Must include an uppercase letter.";
   if (fields.password !== fields.confirm)
     errors.confirm = "Passwords do not match.";
   return errors;
@@ -20,39 +21,33 @@ function validate(fields) {
 export default function Register() {
   const { setUser } = useAuth();
   const nav = useNavigate();
-
-  const [fields, setFields] = useState({ name: "", email: "", password: "", confirm: "" });
+  const [fields, setFields]   = useState({ name: "", email: "", password: "", confirm: "" });
   const [touched, setTouched] = useState({});
   const [serverError, setServerError] = useState("");
   const [loading, setLoading] = useState(false);
 
   const errors = validate(fields);
-  const set = k => e => setFields(f => ({ ...f, [k]: e.target.value }));
+  const set  = k => e => setFields(f => ({ ...f, [k]: e.target.value }));
   const blur = k => () => setTouched(t => ({ ...t, [k]: true }));
 
   const handleSubmit = async e => {
     e.preventDefault();
     setTouched({ name: true, email: true, password: true, confirm: true });
     if (Object.keys(errors).length) return;
-
     setLoading(true);
     setServerError("");
     try {
-      const res = await fetch("http://localhost:3000/register", {
+      const res = await apiFetch("/register", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        credentials: "include",
         body: JSON.stringify({ name: fields.name, email: fields.email, password: fields.password }),
       });
       const data = await res.json();
       if (!res.ok) return setServerError(data.error || "Registration failed.");
+      setToken(data.token);
       setUser(data);
-      nav("/tasks");
-    } catch {
-      setServerError("Network error. Please try again.");
-    } finally {
-      setLoading(false);
-    }
+      nav("/dashboard");
+    } catch { setServerError("Network error. Please try again."); }
+    finally { setLoading(false); }
   };
 
   return (
@@ -62,25 +57,20 @@ export default function Register() {
         {serverError && <p className="field-error" style={{ marginBottom: "1rem" }}>{serverError}</p>}
         <form onSubmit={handleSubmit} noValidate>
           {[
-            { key: "name",     label: "Full name",       type: "text",     placeholder: "Jane Doe" },
-            { key: "email",    label: "Email",           type: "email",    placeholder: "jane@example.com" },
-            { key: "password", label: "Password",        type: "password", placeholder: "Min 8 chars + uppercase" },
-            { key: "confirm",  label: "Confirm password",type: "password", placeholder: "Repeat password" },
+            { key: "name",     label: "Full name",        type: "text",     placeholder: "Jane Doe" },
+            { key: "email",    label: "Email",            type: "email",    placeholder: "jane@example.com" },
+            { key: "password", label: "Password",         type: "password", placeholder: "Min 8 chars + uppercase" },
+            { key: "confirm",  label: "Confirm password", type: "password", placeholder: "Repeat password" },
           ].map(({ key, label, type, placeholder }) => (
             <div className="form-group" key={key}>
               <label htmlFor={key}>{label}</label>
-              <input
-                id={key} type={type} placeholder={placeholder}
-                value={fields[key]}
-                onChange={set(key)} onBlur={blur(key)}
-                className={touched[key] && errors[key] ? "error" : ""}
-              />
-              {touched[key] && errors[key] && (
-                <span className="field-error">{errors[key]}</span>
-              )}
+              <input id={key} type={type} placeholder={placeholder}
+                value={fields[key]} onChange={set(key)} onBlur={blur(key)}
+                className={touched[key] && errors[key] ? "error" : ""} />
+              {touched[key] && errors[key] && <span className="field-error">{errors[key]}</span>}
             </div>
           ))}
-          <button className="btn btn-primary" style={{ width: "100%", borderRadius: "6px", justifyContent: "center" }} disabled={loading}>
+          <button className="btn btn-primary" style={{ width: "100%", justifyContent: "center", borderRadius: "6px" }} disabled={loading}>
             {loading ? "Creating account…" : "Sign up"}
           </button>
         </form>
